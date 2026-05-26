@@ -1,0 +1,10 @@
+^D:\CLAUDE\HARDWARE-RELIABILITY-ANALYTICS\HARDWARE_MONITOR\CMAKELISTS.TXT
+setlocal
+C:\Users\froyt\AppData\Roaming\Python\Python314\site-packages\cmake\data\bin\cmake.exe -SD:/Claude/hardware-reliability-analytics/hardware_monitor -BD:/Claude/hardware-reliability-analytics/hardware_monitor/build --check-stamp-file D:/Claude/hardware-reliability-analytics/hardware_monitor/build/CMakeFiles/generate.stamp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
