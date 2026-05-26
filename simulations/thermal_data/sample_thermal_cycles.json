@@ -1,0 +1,34 @@
+{
+  "simulation_id": "IBM_POWER10_PKG_001",
+  "component": "C4 Solder Bump Array — POWER10 MCM",
+  "material": "SAC305",
+  "geometry": {
+    "standoff_height_um": 100,
+    "bump_diameter_um": 150,
+    "dnp_max_mm": 15.2
+  },
+  "material_properties": {
+    "elastic_modulus_GPa": 51.0,
+    "poissons_ratio": 0.36,
+    "CTE_ppm_per_C": 21.0,
+    "substrate_CTE_ppm_per_C": 3.2,
+    "fatigue_ductility_coefficient": 0.325,
+    "fatigue_ductility_exponent": -0.527,
+    "shear_modulus_GPa": 18.7
+  },
+  "thermal_cycles": [
+    {"cycle_id": 1, "T_min_C": -40, "T_max_C": 125, "ramp_rate_C_per_min": 10, "dwell_min_min": 10, "plastic_strain_range": 0.0082},
+    {"cycle_id": 2, "T_min_C": -40, "T_max_C": 125, "ramp_rate_C_per_min": 10, "dwell_min_min": 10, "plastic_strain_range": 0.0084},
+    {"cycle_id": 3, "T_min_C": -40, "T_max_C": 125, "ramp_rate_C_per_min": 10, "dwell_min_min": 10, "plastic_strain_range": 0.0081},
+    {"cycle_id": 4, "T_min_C": -40, "T_max_C": 125, "ramp_rate_C_per_min": 10, "dwell_min_min": 10, "plastic_strain_range": 0.0079},
+    {"cycle_id": 5, "T_min_C": -40, "T_max_C": 125, "ramp_rate_C_per_min": 10, "dwell_min_min": 10, "plastic_strain_range": 0.0086},
+    {"cycle_id": 6, "T_min_C": -55, "T_max_C": 150, "ramp_rate_C_per_min": 15, "dwell_min_min": 5, "plastic_strain_range": 0.0112},
+    {"cycle_id": 7, "T_min_C": -55, "T_max_C": 150, "ramp_rate_C_per_min": 15, "dwell_min_min": 5, "plastic_strain_range": 0.0115},
+    {"cycle_id": 8, "T_min_C": -65, "T_max_C": 150, "ramp_rate_C_per_min": 20, "dwell_min_min": 5, "plastic_strain_range": 0.0143},
+    {"cycle_id": 9, "T_min_C": -65, "T_max_C": 150, "ramp_rate_C_per_min": 20, "dwell_min_min": 5, "plastic_strain_range": 0.0145},
+    {"cycle_id": 10, "T_min_C": -65, "T_max_C": 150, "ramp_rate_C_per_min": 20, "dwell_min_min": 5, "plastic_strain_range": 0.0140}
+  ],
+  "fea_solver": "Ansys Mechanical 2024 R1",
+  "mesh_elements": 187432,
+  "convergence_criterion": 1e-5
+}
