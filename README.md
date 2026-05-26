@@ -1,7 +1,7 @@
 # Hardware Reliability & Thermal Analytics Tool
 ### HPC Packaging — Solder Joint Fatigue Analysis & Real-Time Thermal Monitoring
 
-[![Python Tests](https://github.com/YOUR_USERNAME/hardware-reliability-analytics/actions/workflows/ci.yml/badge.svg)](https://github.com/YOUR_USERNAME/hardware-reliability-analytics/actions)
+[![Python Tests](https://github.com/froyglezzz/hardware-reliability-analytics/actions/workflows/ci.yml/badge.svg)](https://github.com/froyglezzz/hardware-reliability-analytics/actions)
 [![C++17](https://img.shields.io/badge/C%2B%2B-17-blue.svg)](hardware_monitor/CMakeLists.txt)
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-blue.svg)](requirements.txt)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
