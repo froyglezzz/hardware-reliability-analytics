@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IBM HPC · Thermal Analytics Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,300;0,400;0,500;0,600;1,400&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --void: #020c12;
+  --surface: #071420;
+  --card: #091826;
+  --card-deep: #060f1a;
+  --b0: rgba(0,229,255,0.06);
+  --b1: rgba(0,229,255,0.13);
+  --b2: rgba(0,229,255,0.28);
+  --cyan: #00e5ff;
+  --cyan-b: #40f0ff;
+  --c-dim: rgba(0,229,255,0.08);
+  --glow-sm: 0 0 8px rgba(0,229,255,0.45);
+  --glow-md: 0 0 20px rgba(0,229,255,0.25),0 0 40px rgba(0,229,255,0.08);
+  --amber: #ffaa40;
+  --amber-d: rgba(255,170,64,0.14);
+  --orange: #ff6a20;
+  --red: #ff3558;
+  --red-d: rgba(255,53,88,0.14);
+  --green: #00e676;
+  --green-d: rgba(0,230,118,0.10);
+  --t0: #dff4ff;
+  --t1: #6aaec8;
+  --t2: #2d6a8a;
+  --t3: #144060;
+  --mono: 'IBM Plex Mono', monospace;
+  --disp: 'Rajdhani', sans-serif;
+  --r: 3px;
+  --gap: 10px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{font-size:13px;background:var(--void);color:var(--t0)}
+body{
+  font-family:var(--mono);
+  min-height:100vh;
+  background:var(--void);
+  background-image:
+    linear-gradient(rgba(0,229,255,0.018) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(0,229,255,0.018) 1px,transparent 1px);
+  background-size:48px 48px;
+  padding:14px;
+  position:relative;
+}
+body::after{
+  content:'';position:fixed;inset:0;pointer-events:none;z-index:900;
+  background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,0,0,0.07) 3px,rgba(0,0,0,0.07) 4px);
+}
+.noise{position:fixed;inset:0;pointer-events:none;z-index:901;opacity:0.025}
+
+/* layout */
+.dash{max-width:1580px;margin:0 auto;display:grid;gap:var(--gap);grid-template-rows:auto auto auto auto}
+.main-grid{display:grid;grid-template-columns:226px 1fr 252px;gap:var(--gap);align-items:start}
+.left-col{display:flex;flex-direction:column;gap:var(--gap)}
+.bottom-row{display:grid;grid-template-columns:1fr 1fr;gap:var(--gap)}
+
+/* card */
+.card{background:var(--card);border:1px solid var(--b0);border-radius:var(--r);overflow:hidden;position:relative}
+.card::before{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,229,255,0.015) 0%,transparent 40%);pointer-events:none}
+.ch{display:flex;align-items:center;justify-content:space-between;padding:7px 12px;border-bottom:1px solid var(--b0);background:rgba(0,0,0,0.25)}
+.ct{font-family:var(--disp);font-size:10px;font-weight:600;letter-spacing:2.5px;color:var(--t2);text-transform:uppercase}
+.cbadge{font-size:8px;letter-spacing:1px;padding:2px 6px;background:var(--c-dim);border:1px solid var(--b1);color:var(--cyan);border-radius:2px}
+
+/* header */
+.header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:10px 18px;
+  background:var(--card);
+  border:1px solid var(--b1);
+  border-top:2px solid var(--cyan);
+  border-radius:var(--r);
+  position:relative;overflow:hidden;
+}
+.header::after{
+  content:'';position:absolute;top:2px;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,rgba(0,229,255,0.6) 0%,transparent 70%);
+}
+.hbrand{display:flex;align-items:center;gap:14px}
+.hlogo{font-family:var(--disp);font-size:26px;font-weight:700;letter-spacing:4px;color:var(--cyan);text-shadow:var(--glow-md)}
+.hsep{width:1px;height:28px;background:var(--b1)}
+.htitle{font-family:var(--disp);font-size:15px;font-weight:600;letter-spacing:2.5px;color:var(--t0)}
+.hsub{font-size:9px;color:var(--t2);letter-spacing:0.5px;margin-top:2px}
+.hmeta{display:flex;align-items:center;gap:20px}
+.hmi{text-align:right}
+.hml{font-size:8px;letter-spacing:1.5px;color:var(--t2);text-transform:uppercase}
+.hmv{font-size:11px;color:var(--cyan);margin-top:2px}
+.live-badge{display:flex;align-items:center;gap:7px;padding:5px 10px;background:var(--green-d);border:1px solid rgba(0,230,118,0.25);border-radius:var(--r)}
+.live-dot{width:5px;height:5px;background:var(--green);border-radius:50%;box-shadow:0 0 6px var(--green);animation:blink 2.2s ease-in-out infinite}
+.live-txt{font-size:9px;letter-spacing:1.5px;color:var(--green)}
+@keyframes blink{0%,100%{opacity:1;box-shadow:0 0 6px var(--green)}50%{opacity:0.4;box-shadow:0 0 12px var(--green)}}
+
+/* scan refresh line on charts */
+.crt-wrap{position:relative;background:#010c12;overflow:hidden}
+.crt-wrap::after{
+  content:'';position:absolute;left:0;right:0;height:3px;
+  background:linear-gradient(180deg,transparent,rgba(0,229,255,0.06),transparent);
+  animation:scan 5s linear infinite;pointer-events:none;z-index:10;
+}
+@keyframes scan{0%{top:-4px}100%{top:calc(100% + 4px)}}
+
+/* material props */
+.props-body{padding:12px}
+.pg-label{font-size:8px;letter-spacing:2px;color:var(--t3);text-transform:uppercase;margin-bottom:5px;border-bottom:1px solid var(--b0);padding-bottom:3px}
+.pg{margin-bottom:10px}
+.pr{display:flex;justify-content:space-between;align-items:center;padding:3px 0}
+.pk{font-size:9.5px;color:var(--t2);font-style:italic}
+.pv{font-size:10.5px;color:var(--cyan-b);text-align:right}
+.pu{font-size:8px;color:var(--t2);margin-left:2px}
+.pv.warn{color:var(--amber)}
+
+/* risk gauge */
+.risk-wrap{padding:10px 12px;border-top:1px solid var(--b0)}
+.risk-label{font-family:var(--disp);font-size:9px;letter-spacing:2px;color:var(--t2);text-transform:uppercase;margin-bottom:8px}
+.gauge-center{display:flex;justify-content:center;position:relative}
+.gauge-overlay{position:absolute;bottom:-4px;left:50%;transform:translateX(-50%);text-align:center;pointer-events:none}
+.gauge-num{font-size:17px;font-weight:600;color:var(--green)}
+.gauge-tag{font-family:var(--disp);font-size:10px;letter-spacing:2.5px;color:var(--green);display:block;margin-top:1px}
+.stat-rows{margin-top:10px;font-size:9.5px;color:var(--t2)}
+.stat-row{display:flex;justify-content:space-between;padding:3px 0}
+.stat-v{color:var(--cyan)}
+
+/* sensor monitor */
+.monitor-body{padding:8px;display:flex;flex-direction:column;gap:6px}
+.sr{
+  display:grid;grid-template-columns:1fr auto;align-items:center;
+  padding:6px 9px;background:rgba(0,0,0,0.2);
+  border:1px solid var(--b0);border-radius:2px;
+  position:relative;overflow:hidden;transition:border-color 0.4s;
+}
+.sr.warning{border-color:rgba(255,170,64,0.4)}
+.sr.throttle{border-color:rgba(255,106,32,0.5)}
+.sr.critical{border-color:rgba(255,53,88,0.6)}
+.sr-bar{position:absolute;left:0;top:0;bottom:0;background:var(--green-d);transition:width 0.6s ease,background 0.4s}
+.sr.warning .sr-bar{background:var(--amber-d)}
+.sr.throttle .sr-bar{background:rgba(255,106,32,0.1)}
+.sr.critical .sr-bar{background:var(--red-d)}
+.sr-info{position:relative;z-index:1}
+.sr-name{font-size:8.5px;letter-spacing:0.8px;color:var(--t1)}
+.sr-status{font-size:7.5px;letter-spacing:1px;color:var(--green);margin-top:1px;transition:color 0.4s}
+.sr.warning .sr-status{color:var(--amber)}
+.sr.throttle .sr-status{color:var(--orange)}
+.sr.critical .sr-status{color:var(--red)}
+.sr-temp{font-size:15px;font-weight:500;color:var(--green);position:relative;z-index:1;text-align:right;transition:color 0.4s;font-variant-numeric:tabular-nums}
+.sr.warning .sr-temp{color:var(--amber)}
+.sr.throttle .sr-temp{color:var(--orange)}
+.sr.critical .sr-temp{color:var(--red);text-shadow:0 0 8px var(--red)}
+.sr-unit{font-size:8px;color:var(--t2);text-align:right}
+.thresholds{padding:7px 9px;border-top:1px solid var(--b0);font-size:8.5px;color:var(--t2);display:flex;flex-direction:column;gap:3px}
+.th-row{display:flex;justify-content:space-between}
+
+/* wöhler chart */
+.woehler-card{display:flex;flex-direction:column}
+.woehler-card .crt-wrap{flex:1;min-height:400px}
+
+/* damage + table */
+.table-wrap{overflow:auto;max-height:210px}
+table.ct{width:100%;border-collapse:collapse;font-size:9.5px}
+table.ct th{font-family:var(--disp);font-size:8px;letter-spacing:1.5px;color:var(--t2);text-transform:uppercase;text-align:right;padding:5px 9px;border-bottom:1px solid var(--b0);white-space:nowrap}
+table.ct th:first-child{text-align:center}
+table.ct td{text-align:right;padding:4px 9px;color:var(--t1);border-bottom:1px solid var(--b0);font-variant-numeric:tabular-nums}
+table.ct td:first-child{text-align:center;color:var(--t2)}
+table.ct tr:hover td{background:var(--c-dim);color:var(--t0)}
+.nfv{color:var(--cyan)}.dmgv{color:var(--amber)}
+.sl{color:var(--red)!important}.sm{color:var(--amber)!important}.sg{color:var(--green)!important}
+
+/* footer */
+.footer{display:flex;justify-content:space-between;align-items:center;padding:6px 14px;font-size:8px;color:var(--t3);letter-spacing:1px;border-top:1px solid var(--b0)}
+
+/* fade-in for SVG elements */
+@keyframes fi{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:translateY(0)}}
+</style>
+</head>
+<body>
+
+<!-- noise grain -->
+<svg class="noise" xmlns="http://www.w3.org/2000/svg"><filter id="nz"><feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="4" stitchTiles="stitch"/><feColorMatrix type="saturate" values="0"/></filter><rect width="100%" height="100%" filter="url(#nz)"/></svg>
+
+<div class="dash">
+
+  <!-- HEADER -->
+  <header class="header">
+    <div class="hbrand">
+      <div class="hlogo">IBM</div>
+      <div class="hsep"></div>
+      <div>
+        <div class="htitle">THERMAL RELIABILITY ANALYTICS</div>
+        <div class="hsub">HPC Packaging · Solder Joint Fatigue Analysis · Real-Time Monitoring</div>
+      </div>
+    </div>
+    <div class="hmeta">
+      <div class="hmi"><div class="hml">Simulation ID</div><div class="hmv">IBM_POWER10_PKG_001</div></div>
+      <div class="hmi"><div class="hml">Component</div><div class="hmv">C4 Solder Bump Array — MCM</div></div>
+      <div class="hmi"><div class="hml">Solver</div><div class="hmv">Ansys Mechanical 2024 R1</div></div>
+      <div class="hmi"><div class="hml">Mesh Elements</div><div class="hmv">187,432</div></div>
+      <div class="live-badge"><div class="live-dot"></div><span class="live-txt">MONITOR ACTIVE</span></div>
+    </div>
+  </header>
+
+  <!-- MAIN GRID -->
+  <div class="main-grid">
+
+    <!-- LEFT COL -->
+    <div class="left-col">
+      <!-- Material Properties -->
+      <div class="card">
+        <div class="ch"><span class="ct">Material Properties</span><span class="cbadge">SAC305</span></div>
+        <div class="props-body">
+          <div class="pg">
+            <div class="pg-label">Fatigue Constants</div>
+            <div class="pr"><span class="pk">εf′ (ductility coeff.)</span><span class="pv">0.325</span></div>
+            <div class="pr"><span class="pk">c (ductility exp.)</span><span class="pv">−0.527</span></div>
+          </div>
+          <div class="pg">
+            <div class="pg-label">Elastic Properties</div>
+            <div class="pr"><span class="pk">E (Young's modulus)</span><span class="pv">51<span class="pu">GPa</span></span></div>
+            <div class="pr"><span class="pk">G (shear modulus)</span><span class="pv">18.7<span class="pu">GPa</span></span></div>
+            <div class="pr"><span class="pk">ν (Poisson's ratio)</span><span class="pv">0.36</span></div>
+          </div>
+          <div class="pg">
+            <div class="pg-label">Thermal Expansion</div>
+            <div class="pr"><span class="pk">CTE solder</span><span class="pv">21<span class="pu">ppm/°C</span></span></div>
+            <div class="pr"><span class="pk">CTE substrate</span><span class="pv">3.2<span class="pu">ppm/°C</span></span></div>
+            <div class="pr"><span class="pk">ΔCTE mismatch</span><span class="pv warn">17.8<span class="pu">ppm/°C</span></span></div>
+          </div>
+          <div class="pg">
+            <div class="pg-label">Package Geometry</div>
+            <div class="pr"><span class="pk">DNP max</span><span class="pv">15.2<span class="pu">mm</span></span></div>
+            <div class="pr"><span class="pk">Standoff height</span><span class="pv">100<span class="pu">µm</span></span></div>
+            <div class="pr"><span class="pk">Bump diameter</span><span class="pv">150<span class="pu">µm</span></span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Risk Assessment -->
+      <div class="card">
+        <div class="ch"><span class="ct">Damage Assessment</span></div>
+        <div class="risk-wrap">
+          <div class="risk-label">Miner's Cumulative Damage Index</div>
+          <div class="gauge-center">
+            <svg id="risk-svg" width="196" height="108" viewBox="0 0 196 108">
+              <defs>
+                <filter id="gg"><feGaussianBlur stdDeviation="2.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+              </defs>
+              <!-- bg arc -->
+              <path d="M18 100 A80 80 0 0 1 178 100" fill="none" stroke="rgba(0,229,255,0.07)" stroke-width="11" stroke-linecap="round"/>
+              <!-- zone arcs -->
+              <path d="M18 100 A80 80 0 0 1 85 24" fill="none" stroke="rgba(0,230,118,0.2)" stroke-width="11"/>
+              <path d="M85 24 A80 80 0 0 1 140 30" fill="none" stroke="rgba(255,170,64,0.2)" stroke-width="11"/>
+              <path d="M140 30 A80 80 0 0 1 168 60" fill="none" stroke="rgba(255,106,32,0.2)" stroke-width="11"/>
+              <path d="M168 60 A80 80 0 0 1 178 100" fill="none" stroke="rgba(255,53,88,0.2)" stroke-width="11"/>
+              <!-- fill arc -->
+              <path id="risk-arc" d="M18 100 A80 80 0 0 1 18.01 100" fill="none" stroke="#00e676" stroke-width="11" stroke-linecap="round" filter="url(#gg)"/>
+              <!-- ticks -->
+              <text x="10" y="114" font-family="IBM Plex Mono" font-size="8" fill="rgba(0,229,255,0.35)">0</text>
+              <text x="85" y="17" font-family="IBM Plex Mono" font-size="8" fill="rgba(255,170,64,0.5)" text-anchor="middle">0.5</text>
+              <text x="186" y="114" font-family="IBM Plex Mono" font-size="8" fill="rgba(255,53,88,0.5)" text-anchor="end">1.0</text>
+            </svg>
+            <div class="gauge-overlay">
+              <div class="gauge-num" id="gnum">0.000</div>
+              <span class="gauge-tag" id="gtag">LOW</span>
+            </div>
+          </div>
+          <div class="stat-rows">
+            <div class="stat-row"><span>Estimated lifetime</span><span class="stat-v" id="glife">—</span></div>
+            <div class="stat-row"><span>Cycles analyzed</span><span class="stat-v">10</span></div>
+            <div class="stat-row"><span>Qualification target</span><span class="stat-v">D ≤ 0.80</span></div>
+            <div class="stat-row"><span>Standard</span><span class="stat-v">IPC-9701A TC2</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CENTER: Wöhler diagram -->
+    <div class="card woehler-card">
+      <div class="ch"><span class="ct">Wöhler S-N Diagram</span><span class="cbadge">Coffin-Manson · SAC305 · Log-Log</span></div>
+      <div class="crt-wrap" style="flex:1;padding:14px">
+        <svg id="wsv" width="100%" height="100%" viewBox="0 0 548 370" preserveAspectRatio="xMidYMid meet" style="min-height:390px"></svg>
+      </div>
+    </div>
+
+    <!-- RIGHT: Thermal Monitor -->
+    <div class="card">
+      <div class="ch"><span class="ct">Live Thermal Monitor</span><span class="cbadge">POWER10 MCM</span></div>
+      <div class="monitor-body" id="sg"></div>
+      <div class="thresholds">
+        <div class="th-row"><span>WARNING threshold</span><span style="color:var(--amber)">≥ 75°C</span></div>
+        <div class="th-row"><span>THROTTLE threshold</span><span style="color:var(--orange)">≥ 90°C</span></div>
+        <div class="th-row"><span>CRITICAL threshold</span><span style="color:var(--red)">≥ 105°C</span></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- BOTTOM ROW -->
+  <div class="bottom-row">
+    <!-- Damage accumulation -->
+    <div class="card">
+      <div class="ch"><span class="ct">Miner's Damage Accumulation</span><span class="cbadge">10 Thermal Cycles</span></div>
+      <div class="crt-wrap" style="padding:12px 14px">
+        <svg id="dsv" width="100%" height="172" viewBox="0 0 490 172"></svg>
+      </div>
+    </div>
+    <!-- Cycles table -->
+    <div class="card">
+      <div class="ch"><span class="ct">Thermal Cycle Parameters</span><span class="cbadge">FEA Export — Ansys</span></div>
+      <div class="table-wrap">
+        <table class="ct">
+          <thead><tr>
+            <th>#</th><th>T_min</th><th>T_max</th><th>ΔT</th>
+            <th>Δεp</th><th>Nf</th><th>1/Nf</th>
+          </tr></thead>
+          <tbody id="ctb"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <div class="footer">
+    <span>IBM HPC PACKAGING · THERMAL RELIABILITY ANALYTICS TOOL · v1.0.0</span>
+    <span>COFFIN-MANSON · ENGELMAIER (1983) · MINER'S RULE · ANSYS FEA 2024 R1</span>
+    <span id="clk">—</span>
+  </div>
+
+</div>
+
+<script>
+// ── DATA ──────────────────────────────────────────────────────────────────────
+const EFP = 0.325, C = -0.527;
+
+const CYCLES = [
+  {id:1,  Tl:-40,Th:125,r:10,d:10,s:0.0082},
+  {id:2,  Tl:-40,Th:125,r:10,d:10,s:0.0084},
+  {id:3,  Tl:-40,Th:125,r:10,d:10,s:0.0081},
+  {id:4,  Tl:-40,Th:125,r:10,d:10,s:0.0079},
+  {id:5,  Tl:-40,Th:125,r:10,d:10,s:0.0086},
+  {id:6,  Tl:-55,Th:150,r:15,d:5, s:0.0112},
+  {id:7,  Tl:-55,Th:150,r:15,d:5, s:0.0115},
+  {id:8,  Tl:-65,Th:150,r:20,d:5, s:0.0143},
+  {id:9,  Tl:-65,Th:150,r:20,d:5, s:0.0145},
+  {id:10, Tl:-65,Th:150,r:20,d:5, s:0.0140},
+];
+
+const SENSORS = ['PROC0_DIE_TEMP','PROC1_DIE_TEMP','DIMM_A0_TEMP','DIMM_B0_TEMP','VRM_VCORE_TEMP','PCB_INLET_TEMP','HEATSINK_BASE'];
+const THR = {w:75, t:90, c:105};
+
+// ── MODELS ────────────────────────────────────────────────────────────────────
+function nf(s){ return 0.5 * Math.pow(s / EFP, 1 / C); }
+
+function gauss(mu, sig){
+  let u; do { u = Math.random(); } while(u === 0);
+  return mu + sig * Math.sqrt(-2*Math.log(u)) * Math.cos(2*Math.PI*Math.random());
+}
+
+function hashName(n){
+  let h = 0;
+  for(let i = 0; i < n.length; i++) h = (((h * 31) >>> 0) + n.charCodeAt(i)) >>> 0;
+  return h;
+}
+
+function classify(t){ return t>=THR.c?'critical':t>=THR.t?'throttle':t>=THR.w?'warning':'ok'; }
+function statusTxt(c){ return c==='critical'?'● CRITICAL':c==='throttle'?'● THROTTLE':c==='warning'?'● WARNING':'● NOMINAL'; }
+
+// ── WÖHLER DIAGRAM ────────────────────────────────────────────────────────────
+function buildWoehler(){
+  const W=548,H=370;
+  const ML=58,MR=24,MT=22,MB=46;
+  const CW=W-ML-MR,CH=H-MT-MB;
+  const NFN=1,NFX=100000,SN=0.001,SX=0.1;
+
+  function xp(v){ return ML+(Math.log10(v)-0)/(5)*CW; }
+  function yp(v){ return MT+(1-(Math.log10(v)-Math.log10(SN))/(Math.log10(SX)-Math.log10(SN)))*CH; }
+
+  let h = `<defs>
+    <filter id="gw"><feGaussianBlur stdDeviation="2.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    <filter id="gws"><feGaussianBlur stdDeviation="5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>`;
+
+  // bg
+  h += `<rect x="${ML}" y="${MT}" width="${CW}" height="${CH}" fill="#010a0f"/>`;
+
+  // grid
+  const nfTks=[1,2,5,10,20,50,100,200,500,1000,2000,5000,10000,20000,50000,100000];
+  const sTks=[0.001,0.002,0.005,0.01,0.02,0.05,0.1];
+  const nfMaj=[1,10,100,1000,10000,100000];
+
+  for(const v of nfTks){
+    const x=xp(v), maj=nfMaj.includes(v);
+    h+=`<line x1="${x}" y1="${MT}" x2="${x}" y2="${MT+CH}" stroke="rgba(0,229,255,${maj?0.1:0.04})" stroke-width="${maj?1:0.5}"/>`;
+    if(maj){ const lbl=v>=1000?(v/1000)+'K':''+v; h+=`<text x="${x}" y="${MT+CH+14}" text-anchor="middle" font-family="IBM Plex Mono" font-size="8.5" fill="rgba(0,229,255,0.38)">${lbl}</text>`; }
+  }
+  for(const v of sTks){
+    const y=yp(v), maj=[0.001,0.01,0.1].includes(v);
+    h+=`<line x1="${ML}" y1="${y}" x2="${ML+CW}" y2="${y}" stroke="rgba(0,229,255,${maj?0.1:0.04})" stroke-width="${maj?1:0.5}"/>`;
+    h+=`<text x="${ML-5}" y="${y+3}" text-anchor="end" font-family="IBM Plex Mono" font-size="8" fill="rgba(0,229,255,0.35)">${v}</text>`;
+  }
+
+  // Coffin-Manson curve: strain = EFP * (2*nfv)^C
+  const pts=[];
+  for(let i=0;i<=300;i++){
+    const nfv=Math.pow(10, i/300*5);
+    const sv=EFP*Math.pow(2*nfv,C);
+    if(sv>=SN&&sv<=SX){ pts.push([xp(nfv),yp(sv)]); }
+  }
+  if(pts.length>1){
+    let len=0;
+    for(let i=1;i<pts.length;i++){ const dx=pts[i][0]-pts[i-1][0],dy=pts[i][1]-pts[i-1][1]; len+=Math.sqrt(dx*dx+dy*dy); }
+    const pd=pts.map((p,i)=>(i?'L':'M')+p[0].toFixed(1)+','+p[1].toFixed(1)).join('');
+    h+=`<path d="${pd}" fill="none" stroke="rgba(0,229,255,0.12)" stroke-width="7" filter="url(#gws)"/>`;
+    h+=`<path d="${pd}" fill="none" stroke="#00e5ff" stroke-width="1.8" stroke-dasharray="${len.toFixed(0)}" stroke-dashoffset="${len.toFixed(0)}"><animate attributeName="stroke-dashoffset" from="${len.toFixed(0)}" to="0" dur="2.2s" begin="0.4s" fill="freeze"/></path>`;
+  }
+
+  // Data points
+  CYCLES.forEach((cy,i)=>{
+    const v=nf(cy.s);
+    if(v>=NFN&&v<=NFX&&cy.s>=SN&&cy.s<=SX){
+      const x=xp(v),y=yp(cy.s);
+      const delay=(2.8+i*0.12).toFixed(2);
+      h+=`<g style="animation:fi 0.4s ease ${delay}s both">
+        <circle cx="${x}" cy="${y}" r="5.5" fill="#010a0f" stroke="#ffaa40" stroke-width="1.6" filter="url(#gw)"/>
+        <circle cx="${x}" cy="${y}" r="2.2" fill="#ffaa40"/>
+        <text x="${x+8}" y="${y-5}" font-family="IBM Plex Mono" font-size="7.5" fill="rgba(255,170,64,0.65)">${cy.id}</text>
+      </g>`;
+    }
+  });
+
+  // Axes labels
+  h+=`<text x="${ML+CW/2}" y="${H-4}" text-anchor="middle" font-family="Rajdhani" font-size="12" letter-spacing="2.5" fill="rgba(0,229,255,0.42)">CYCLES TO FAILURE  Nf</text>`;
+  h+=`<text x="${-(MT+CH/2)}" y="10" text-anchor="middle" font-family="Rajdhani" font-size="11" letter-spacing="2.5" fill="rgba(0,229,255,0.42)" transform="rotate(-90)">PLASTIC STRAIN RANGE  Δεp</text>`;
+
+  // Legend
+  h+=`<g style="animation:fi 0.5s ease 3.5s both">
+    <line x1="${ML+CW-116}" y1="${MT+13}" x2="${ML+CW-86}" y2="${MT+13}" stroke="#00e5ff" stroke-width="1.8"/>
+    <text x="${ML+CW-81}" y="${MT+17}" font-family="IBM Plex Mono" font-size="8" fill="rgba(0,229,255,0.55)">COFFIN-MANSON FIT</text>
+    <circle cx="${ML+CW-111}" cy="${MT+29}" r="4.5" fill="#010a0f" stroke="#ffaa40" stroke-width="1.6"/>
+    <circle cx="${ML+CW-111}" cy="${MT+29}" r="2" fill="#ffaa40"/>
+    <text x="${ML+CW-104}" y="${MT+33}" font-family="IBM Plex Mono" font-size="8" fill="rgba(255,170,64,0.55)">SIMULATION DATA</text>
+  </g>`;
+
+  document.getElementById('wsv').innerHTML = h;
+}
+
+// ── DAMAGE CHART ──────────────────────────────────────────────────────────────
+function buildDamage(){
+  const W=490,H=172;
+  const ML=50,MR=18,MT=14,MB=36;
+  const CW=W-ML-MR,CH=H-MT-MB;
+
+  let cum=[],tot=0;
+  for(const cy of CYCLES){ tot+=1/nf(cy.s); cum.push(tot); }
+  const DX=tot*1.45;
+  const N=CYCLES.length;
+
+  function xp(i){ return ML+i/(N-1)*CW; }
+  function yp(d){ return MT+(1-d/DX)*CH; }
+
+  let h=`<defs><filter id="gd"><feGaussianBlur stdDeviation="2.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>`;
+  h+=`<rect x="${ML}" y="${MT}" width="${CW}" height="${CH}" fill="#010a0f"/>`;
+
+  // grid
+  for(let i=0;i<N;i++){
+    const x=xp(i);
+    h+=`<line x1="${x}" y1="${MT}" x2="${x}" y2="${MT+CH}" stroke="rgba(0,229,255,0.06)" stroke-width="1"/>`;
+    h+=`<text x="${x}" y="${MT+CH+13}" text-anchor="middle" font-family="IBM Plex Mono" font-size="8" fill="rgba(0,229,255,0.32)">${i+1}</text>`;
+  }
+  for(let j=0;j<=4;j++){
+    const d=DX*j/4, y=yp(d);
+    h+=`<line x1="${ML}" y1="${y}" x2="${ML+CW}" y2="${y}" stroke="rgba(0,229,255,0.06)" stroke-width="1"/>`;
+    h+=`<text x="${ML-5}" y="${y+3}" text-anchor="end" font-family="IBM Plex Mono" font-size="7.5" fill="rgba(0,229,255,0.3)">${d.toFixed(3)}</text>`;
+  }
+
+  // area
+  let area=`M${xp(0)},${yp(cum[0])}`;
+  for(let i=1;i<N;i++) area+=` L${xp(i)},${yp(cum[i])}`;
+  area+=` L${xp(N-1)},${MT+CH} L${ML},${MT+CH} Z`;
+  h+=`<path d="${area}" fill="rgba(0,229,255,0.035)"/>`;
+
+  // line
+  let line=cum.map((d,i)=>(i?'L':'M')+xp(i).toFixed(1)+','+yp(d).toFixed(1)).join('');
+  let len=0;
+  for(let i=1;i<N;i++){ const dx=xp(i)-xp(i-1),dy=yp(cum[i])-yp(cum[i-1]); len+=Math.sqrt(dx*dx+dy*dy); }
+  len+=40;
+
+  h+=`<path d="${line}" fill="none" stroke="rgba(0,229,255,0.18)" stroke-width="5" filter="url(#gd)"/>`;
+  h+=`<path d="${line}" fill="none" stroke="#00e5ff" stroke-width="1.8" stroke-dasharray="${len.toFixed(0)}" stroke-dashoffset="${len.toFixed(0)}"><animate attributeName="stroke-dashoffset" from="${len.toFixed(0)}" to="0" dur="1.6s" begin="0.3s" fill="freeze"/></path>`;
+
+  // dots
+  cum.forEach((d,i)=>{
+    h+=`<circle cx="${xp(i).toFixed(1)}" cy="${yp(d).toFixed(1)}" r="3.5" fill="#010a0f" stroke="#00e5ff" stroke-width="1.2" style="animation:fi 0.3s ease ${(1.9+i*0.08).toFixed(2)}s both"/>`;
+  });
+
+  h+=`<text x="${ML+CW/2}" y="${H-4}" text-anchor="middle" font-family="Rajdhani" font-size="11" letter-spacing="2" fill="rgba(0,229,255,0.38)">THERMAL CYCLE #</text>`;
+  h+=`<text x="-${MT+CH/2}" y="9" text-anchor="middle" font-family="Rajdhani" font-size="10" letter-spacing="2" fill="rgba(0,229,255,0.38)" transform="rotate(-90)">DAMAGE D</text>`;
+
+  document.getElementById('dsv').innerHTML = h;
+}
+
+// ── RISK GAUGE ────────────────────────────────────────────────────────────────
+function updateRisk(){
+  let tot=0; for(const cy of CYCLES) tot+=1/nf(cy.s);
+  const life=Math.round(CYCLES.length/tot);
+  document.getElementById('glife').textContent=life.toLocaleString()+' cycles';
+
+  const D=Math.min(tot,1);
+  const cx=98,cy=100,r=80;
+  const ang=Math.PI*(1-D);
+  const ex=(cx+r*Math.cos(ang)).toFixed(2);
+  const ey=(cy-r*Math.sin(ang)).toFixed(2);
+  const la=D>0.5?1:0;
+  const pd=D<0.001?`M18 100 A80 80 0 0 1 18.5 99.5`:`M18 100 A80 80 0 ${la} 1 ${ex} ${ey}`;
+
+  let col,tag;
+  if(tot>=0.8){col='#ff3558';tag='CRITICAL';}
+  else if(tot>=0.5){col='#ff6a20';tag='HIGH';}
+  else if(tot>=0.25){col='#ffaa40';tag='MODERATE';}
+  else{col='#00e676';tag='LOW';}
+
+  const arc=document.getElementById('risk-arc');
+  arc.setAttribute('d',pd); arc.setAttribute('stroke',col);
+  const gn=document.getElementById('gnum'); gn.textContent=tot.toFixed(4); gn.style.color=col;
+  const gt=document.getElementById('gtag'); gt.textContent=tag; gt.style.color=col;
+}
+
+// ── CYCLES TABLE ─────────────────────────────────────────────────────────────
+function buildTable(){
+  let h='';
+  for(const cy of CYCLES){
+    const Nf=nf(cy.s), dmg=1/Nf, dT=cy.Th-cy.Tl;
+    const sc=cy.s>=0.013?'sl':cy.s>=0.01?'sm':'sg';
+    h+=`<tr>
+      <td>${cy.id}</td>
+      <td>${cy.Tl}°C</td><td>${cy.Th}°C</td><td>${dT}°C</td>
+      <td class="${sc}">${cy.s.toFixed(4)}</td>
+      <td class="nfv">${Math.round(Nf)}</td>
+      <td class="dmgv">${dmg.toExponential(2)}</td>
+    </tr>`;
+  }
+  document.getElementById('ctb').innerHTML=h;
+}
+
+// ── THERMAL MONITOR ───────────────────────────────────────────────────────────
+const state={};
+SENSORS.forEach(n=>{ const b=65+(hashName(n)%30); state[n]={b,v:gauss(b,4.5)}; });
+
+function renderSensors(){
+  let h='';
+  for(const n of SENSORS){
+    const s=state[n], cls=classify(s.v);
+    const pct=Math.min((s.v-45)/(THR.c-45)*100,100);
+    const short=n.replace('_TEMP','').replace(/_/g,' ');
+    h+=`<div class="sr ${cls}" id="sr-${n}">
+      <div class="sr-bar" style="width:${pct.toFixed(1)}%"></div>
+      <div class="sr-info">
+        <div class="sr-name">${short}</div>
+        <div class="sr-status">${statusTxt(cls)}</div>
+      </div>
+      <div>
+        <div class="sr-temp">${s.v.toFixed(1)}</div>
+        <div class="sr-unit">°C</div>
+      </div>
+    </div>`;
+  }
+  document.getElementById('sg').innerHTML=h;
+}
+
+function updateSensors(){
+  for(const n of SENSORS){
+    const s=state[n];
+    s.v=s.v*0.72+gauss(s.b,5)*0.28;
+    const el=document.getElementById('sr-'+n); if(!el) continue;
+    const cls=classify(s.v);
+    const pct=Math.min((s.v-45)/(THR.c-45)*100,100);
+    el.className='sr '+cls;
+    el.querySelector('.sr-bar').style.width=pct.toFixed(1)+'%';
+    el.querySelector('.sr-temp').textContent=s.v.toFixed(1);
+    el.querySelector('.sr-status').textContent=statusTxt(cls);
+  }
+}
+
+// ── CLOCK ─────────────────────────────────────────────────────────────────────
+function tick(){ document.getElementById('clk').textContent=new Date().toISOString().replace('T',' ').slice(0,19)+' UTC'; }
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+buildWoehler();
+buildDamage();
+updateRisk();
+buildTable();
+renderSensors();
+tick();
+setInterval(updateSensors, 580);
+setInterval(tick, 1000);
+</script>
+</body>
+</html>
