@@ -1,0 +1,27 @@
+# Build artifacts
+hardware_monitor/build/
+*.exe
+*.lib
+*.obj
+*.pdb
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+*.egg-info/
+dist/
+build/
+.coverage
+htmlcov/
+
+# Analysis outputs (generated)
+simulations/results/*.png
+simulations/results/*.csv
+
+# IDE
+.vscode/
+.idea/
+*.suo
+*.user

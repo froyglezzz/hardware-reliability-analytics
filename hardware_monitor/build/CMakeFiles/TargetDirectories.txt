@@ -1,4 +1,0 @@
-D:/Claude/hardware-reliability-analytics/hardware_monitor/build/CMakeFiles/thermal_monitor_lib.dir
-D:/Claude/hardware-reliability-analytics/hardware_monitor/build/CMakeFiles/thermal_monitor.dir
-D:/Claude/hardware-reliability-analytics/hardware_monitor/build/CMakeFiles/ALL_BUILD.dir
-D:/Claude/hardware-reliability-analytics/hardware_monitor/build/CMakeFiles/ZERO_CHECK.dir
